@@ -1,18 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CHIP8JS</title>
-</head>
-<style>
-    body {
-        background-color: gray;
+  </head>
+  <style>
+    * {
+        margin: 0;
     }
-</style>
-<body>
-    <input type="file" id="fileInput" accept="" />
-    <canvas id="canvas"></canvas>
+    body {
+      background-color: gray;
+      height: 75vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .container {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    #fileInput {
+        position: absolute;
+        right: 120px;
+    }
+
+  </style>
+  <body>
+    <div class="container">
+      <canvas id="canvas"></canvas>
+      <input type="file" id="fileInput" accept="">
+    </div>
     <script src="chip8.js"></script>
-</body>
+  </body>
 </html>

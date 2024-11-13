@@ -136,6 +136,7 @@ class Chip8 {
     this.drawFlag = true;
   }
 
+  // Function to load a program into the memory
   async LoadProgram(file) {
     console.log("Loading program: " + file.name);
 
@@ -163,6 +164,7 @@ class Chip8 {
 
         const lSize = byteArray.length;
 
+        // Load bytes if ROM size fits the memory
         if (4096 - 512 > lSize) {
           for (let i = 0; i < lSize; ++i) {
             this.mem[i + 512] = byteArray[i];
@@ -178,31 +180,24 @@ class Chip8 {
   }
 
   emulateCycle() {
-    let pc = this.pc;
-    let sp = this.sp;
-    let stack = this.stack;
-    let opcode = this.opcode;
-    let V = this.V;
-    let I = this.I;
-
     // Fetch Opcode. Get current byte and next one.
-    opcode = (this.mem[pc] << 8) | this.mem[pc + 1];
+    this.opcode = (this.mem[this.pc] << 8) | this.mem[this.pc + 1];
 
     //console.log(opcode.toString(16));
     // Decode&Execute Opcode
-    switch (opcode & 0xf000) {
+    switch (this.opcode & 0xf000) {
       case 0x0000:
-        switch (opcode & 0x000f) {
+        switch (this.opcode & 0x000f) {
           case 0x0000: // 00E0: Clear the display
             this.gfx.fill(0);
             this.drawFlag = true;
-            pc += 2;
+            this.pc += 2;
             break;
 
           case 0x000e: // 00EE: Return from a subroutine
-            --sp;
-            pc = stack[sp];
-            pc += 2;
+            --this.sp;
+            this.pc = this.stack[this.sp];
+            this.pc += 2;
             break;
 
           default:
@@ -212,125 +207,151 @@ class Chip8 {
         break;
 
       case 0x1000: // 1NNN: Jumps to address NNN
-        pc = opcode & 0x0fff;
+        this.pc = this.opcode & 0x0fff;
         break;
 
       case 0x2000: // 2NNN: Calls subroutine at NNN
-        stack[sp] = pc;
-        ++sp;
-        pc = 0x0fff & opcode;
+        this.stack[this.sp] = this.pc;
+        ++this.sp;
+        this.pc = 0x0fff & this.opcode;
         break;
 
       case 0x3000: // 3XKK: Skip next instruction if Vx = kk.
-        if (V[(opcode & 0x0f00) >> 8] == (opcode & 0x00ff)) pc += 4;
-        else pc += 2;
+        if (this.V[(this.opcode & 0x0f00) >> 8] == (this.opcode & 0x00ff))
+          this.pc += 4;
+        else this.pc += 2;
         break;
 
       case 0x4000: // 4XKK: Skip next instruction if Vx != kk.
-        if (V[(opcode & 0x0f00) >> 8] != (opcode & 0x00ff)) pc += 4;
-        else pc += 2;
+        if (this.V[(this.opcode & 0x0f00) >> 8] != (this.opcode & 0x00ff))
+          this.pc += 4;
+        else this.pc += 2;
         break;
 
       case 0x5000: // 5XY0: Skip next instruction if Vx = Vy.
-        if (V[(opcode & 0x0f00) >> 8] == V[(opcode & 0x00f0) >> 4]) pc += 4;
-        else pc += 2;
+        if (
+          this.V[(this.opcode & 0x0f00) >> 8] ==
+          this.V[(this.opcode & 0x00f0) >> 4]
+        )
+          this.pc += 4;
+        else this.pc += 2;
         break;
 
       case 0x6000: // 6XKK: Set Vx = kk.
-        V[(opcode & 0x0f00) >> 8] = opcode & 0x00ff;
-        pc += 2;
+        this.V[(this.opcode & 0x0f00) >> 8] = this.opcode & 0x00ff;
+        this.pc += 2;
         break;
 
       case 0x7000: // 7XKK: Set Vx = Vx + kk.
-        V[(opcode & 0x0f00) >> 8] += opcode & 0x00ff;
-        pc += 2;
+        this.V[(this.opcode & 0x0f00) >> 8] += this.opcode & 0x00ff;
+        this.pc += 2;
         break;
 
       case 0x8000:
-        switch (opcode & 0x000f) {
+        switch (this.opcode & 0x000f) {
           case 0x0000: // 8XY0: Set Vx = Vy.
-            V[(opcode & 0x0f00) >> 8] = V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            this.V[(this.opcode & 0x0f00) >> 8] =
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           case 0x0001: // 8XY1: Set Vx = Vx OR Vy.
-            V[(opcode & 0x0f00) >> 8] |= V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            this.V[(this.opcode & 0x0f00) >> 8] |=
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           case 0x0002: // 8XY2: Set Vx = Vx AND Vy.
-            V[(opcode & 0x0f00) >> 8] &= V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            this.V[(this.opcode & 0x0f00) >> 8] &=
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           case 0x0003: // 8XY3: Set Vx = Vx XOR Vy.
-            V[(opcode & 0x0f00) >> 8] ^= V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            this.V[(this.opcode & 0x0f00) >> 8] ^=
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           case 0x0004: // 8XY4: Set Vx = Vx + Vy, set VF to 1 if carry, otherwise 0.
-            if (V[(opcode & 0x00f0) >> 4] > 0xff - V[(opcode & 0x0f00) >> 8])
-              V[0xf] = 1;
-            else V[0xf] = 0;
-            V[(opcode & 0x0f00) >> 8] += V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            if (
+              this.V[(this.opcode & 0x00f0) >> 4] >
+              0xff - this.V[(this.opcode & 0x0f00) >> 8]
+            )
+              this.V[0xf] = 1;
+            else this.V[0xf] = 0;
+            this.V[(this.opcode & 0x0f00) >> 8] +=
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           case 0x0005: // 8XY5: Set Vx = Vx - Vy, set VF to 1 if Vx > Vy, otherwise 0.
-            if (V[(opcode & 0x0f00) >> 8] > V[(opcode & 0x00f0) >> 4])
-              V[0xf] = 1;
-            else V[0xf] = 0;
-            V[(opcode & 0x0f00) >> 8] -= V[(opcode & 0x00f0) >> 4];
-            pc += 2;
+            if (
+              this.V[(this.opcode & 0x0f00) >> 8] >
+              this.V[(this.opcode & 0x00f0) >> 4]
+            )
+              this.V[0xf] = 1;
+            else this.V[0xf] = 0;
+            this.V[(this.opcode & 0x0f00) >> 8] -=
+              this.V[(this.opcode & 0x00f0) >> 4];
+            this.pc += 2;
             break;
 
           // If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0.??
           case 0x0006: // 8XY6: Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift
-            V[0xf] = V[(opcode & 0x0f00) >> 8] & 0x1;
-            V[(opcode & 0x0f00) >> 8] >>= 1;
-            pc += 2;
+            this.V[0xf] = this.V[(this.opcode & 0x0f00) >> 8] & 0x1;
+            this.V[(this.opcode & 0x0f00) >> 8] >>= 1;
+            this.pc += 2;
             break;
 
           case 0x0007: // 8XY7: If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and the results stored in Vx.
-            if (V[(opcode & 0x00f0) >> 4] > V[(opcode & 0x0f00) >> 8])
-              V[0xf] = 1;
-            else V[0xf] = 0;
-            V[(opcode & 0x0f00) >> 8] =
-              V[(opcode & 0x00f0) >> 4] - V[(opcode & 0x0f00) >> 8];
-            pc += 2;
+            if (
+              this.V[(this.opcode & 0x00f0) >> 4] >
+              this.V[(this.opcode & 0x0f00) >> 8]
+            )
+              this.V[0xf] = 1;
+            else this.V[0xf] = 0;
+            this.V[(this.opcode & 0x0f00) >> 8] =
+              this.V[(this.opcode & 0x00f0) >> 4] -
+              this.V[(this.opcode & 0x0f00) >> 8];
+            this.pc += 2;
             break;
 
           // If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
           case 0x000e: // 8XYE: Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift
-            V[0xf] = V[(opcode & 0x0f00) >> 8] >> 7;
-            V[(opcode & 0x0f00) >> 8] <<= 1;
-            pc += 2;
+            this.V[0xf] = this.V[(this.opcode & 0x0f00) >> 8] >> 7;
+            this.V[(this.opcode & 0x0f00) >> 8] <<= 1;
+            this.pc += 2;
             break;
 
           default:
-            console.error("Unknown opcode: " + opcode.toString(16));
+            console.error("Unknown opcode: " + this.opcode.toString(16));
             break;
         }
         break;
 
       case 0x9000: // 9XY0: Skip next instruction if Vx != Vy.
-        if (V[(opcode & 0x0f00) >> 8] != V[(opcode & 0x00f0) >> 4]) pc += 4;
-        else pc += 2;
+        if (
+          this.V[(this.opcode & 0x0f00) >> 8] !=
+          this.V[(this.opcode & 0x00f0) >> 4]
+        )
+          this.pc += 4;
+        else this.pc += 2;
         break;
 
       case 0xa000: // Annn: Set I = nnn.
-        I = opcode & 0x0fff;
-        pc += 2;
+        this.I = this.opcode & 0x0fff;
+        this.pc += 2;
         break;
 
       case 0xb000: // Bnnn: Jump to location nnn + V0.
-        pc = (opcode & 0x0fff) + V[0];
+        this.pc = (this.opcode & 0x0fff) + this.V[0];
         break;
 
       case 0xc000: // CXKK: Set Vx = random byte AND kk.
         const rand = Math.floor(Math.random() * 256);
-        V[(opcode & 0x0f00) >> 8] = rand & (opcode & 0xff);
-        pc+=2;
+        this.V[(this.opcode & 0x0f00) >> 8] = this.rand & (this.opcode & 0xff);
+        this.pc += 2;
         break;
 
       case 0xd000: // DXYN: Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels.
@@ -338,18 +359,18 @@ class Chip8 {
         // I value doesn't change after the execution of this instruction.
         // VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn,
         // and to 0 if that doesn't happen
-        const x = V[(opcode & 0x0f00) >> 8];
-        const y = V[(opcode & 0x00f0) >> 4];
-        const height = opcode & 0x000f;
+        const x = this.V[(this.opcode & 0x0f00) >> 8];
+        const y = this.V[(this.opcode & 0x00f0) >> 4];
+        const height = this.opcode & 0x000f;
         let pixel;
 
-        V[0xf] = 0;
+        this.V[0xf] = 0;
         for (let yline = 0; yline < height; yline++) {
-          pixel = this.mem[I + yline];
+          pixel = this.mem[this.I + yline];
           for (let xline = 0; xline < 8; xline++) {
             if ((pixel & (0x80 >> xline)) != 0) {
               if (this.gfx[x + xline + (y + yline) * 64] == 1) {
-                V[0xf] = 1;
+                this.V[0xf] = 1;
               }
               this.gfx[x + xline + (y + yline) * 64] ^= 1;
             }
@@ -357,29 +378,31 @@ class Chip8 {
         }
 
         this.drawFlag = true;
-        pc += 2;
+        this.pc += 2;
 
         break;
 
       case 0xe000:
-        switch (opcode & 0x00ff) {
+        switch (this.opcode & 0x00ff) {
           case 0x009e: // EX9E: Skip next instruction if key with the value of Vx is pressed.
-            if (this.key[V[(opcode & 0x0f009) >> 8]] != 0) pc += 4;
-            else pc += 2;
+            if (this.key[this.V[(this.opcode & 0x0f009) >> 8]] != 0)
+              this.pc += 4;
+            else this.pc += 2;
             break;
 
           case 0x00a1: // EXA1: Skip next instruction if key with the value of Vx is not pressed.
-            if (this.key[V[(opcode & 0x0f00) >> 8]] == 0) pc += 4;
-            else pc += 2;
+            if (this.key[this.V[(this.opcode & 0x0f00) >> 8]] == 0)
+              this.pc += 4;
+            else this.pc += 2;
             break;
         }
         break;
 
       case 0xf000:
-        switch (opcode & 0x000ff) {
+        switch (this.opcode & 0x000ff) {
           case 0x0007: // FX07: Set Vx = delay timer value.
-            V[(opcode & 0x0f00) >> 8] = this.dt;
-            pc += 2;
+            this.V[(this.opcode & 0x0f00) >> 8] = this.dt;
+            this.pc += 2;
             break;
 
           case 0x000a: // FX0A: Wait for a key press, store the value of the key in Vx.
@@ -387,7 +410,7 @@ class Chip8 {
 
             for (let i = 0; i < 16; ++i) {
               if (this.key[i] != 0) {
-                V[(opcode & 0x0f00) >> 8] = i;
+                this.V[(this.opcode & 0x0f00) >> 8] = i;
                 keyPress = true;
               }
             }
@@ -395,61 +418,61 @@ class Chip8 {
             // If we didn't received a keypress, skip this cycle and try again.
             if (!keyPress) return;
 
-            pc += 2;
+            this.pc += 2;
             break;
 
           case 0x0015: // FX15: Set delay timer = Vx
-            this.dt = V[(opcode & 0x0f00) >> 8];
-            pc += 2;
+            this.dt = this.V[(this.opcode & 0x0f00) >> 8];
+            this.pc += 2;
             break;
 
           case 0x0018: // FX18: Set sound timer = Vx.
-            this.st = V[(opcode & 0x0f00) >> 8];
-            pc += 2;
+            this.st = this.V[(this.opcode & 0x0f00) >> 8];
+            this.pc += 2;
             break;
 
           case 0x001e: // FX1E: Set I = I + Vx
-            if (I + V[(opcode & 0x0f00) >> 8] > 0xfff)
+            if (this.I + this.V[(this.opcode & 0x0f00) >> 8] > 0xfff)
               // VF is set to 1 when range overflow (I+VX>0xFFF), and 0 when there isn't.
-              V[0xf] = 1;
-            else V[0xf] = 0;
-            I += V[(opcode & 0x0f00) >> 8];
-            pc += 2;
+              this.V[0xf] = 1;
+            else this.V[0xf] = 0;
+            this.I += this.V[(this.opcode & 0x0f00) >> 8];
+            this.pc += 2;
             break;
 
           case 0x0029: // FX29: Set I = location of sprite for digit Vx.
-            I = V[(opcode & 0x0f00) >> 8] * 0x5;
-            pc += 2;
+            this.I = this.V[(this.opcode & 0x0f00) >> 8] * 0x5;
+            this.pc += 2;
             break;
 
           case 0x0033: // FX33: Stores the Binary-coded decimal representation of VX at the addresses I, I plus 1, and I plus 2
-            const Vx = this.V[(opcode & 0x0f00) >> 8];
+            const Vx = this.V[(this.opcode & 0x0f00) >> 8];
 
-            this.mem[I] = Math.floor(Vx / 100);
-            this.mem[I + 1] = Math.floor(Vx / 10) % 10;
-            this.mem[I + 2] = (Vx % 100) % 10;
+            this.mem[this.I] = Math.floor(Vx / 100);
+            this.mem[this.I + 1] = Math.floor(Vx / 10) % 10;
+            this.mem[this.I + 2] = (Vx % 100) % 10;
 
-            pc += 2;
+            this.pc += 2;
             break;
 
           case 0x0055: // FX55: Store registers V0 through Vx in memory starting at location I.
-            for (let i = 0; i <= (opcode & 0x0f00) >> 8; i++) {
-              this.mem[I + i] = V[i];
+            for (let i = 0; i <= (this.opcode & 0x0f00) >> 8; i++) {
+              this.mem[this.I + i] = this.V[i];
             }
 
             // On the original interpreter, when the operation is done, I = I + X + 1.
-            I += ((opcode & 0x0f00) >> 8) + 1;
-            pc += 2;
+            this.I += ((this.opcode & 0x0f00) >> 8) + 1;
+            this.pc += 2;
             break;
 
           case 0x0065: // FX65: Fills V0 to VX with values from memory starting at address I
-            for (let i = 0; i <= (opcode & 0x0f00) >> 8; ++i) {
-              V[i] = this.mem[I + i];
+            for (let i = 0; i <= (this.opcode & 0x0f00) >> 8; ++i) {
+              this.V[i] = this.mem[this.I + i];
             }
 
             // On the original interpreter, when the operation is done, I = I + X + 1.
-            I += ((opcode & 0x0f00) >> 8) + 1;
-            pc += 2;
+            this.I += ((this.opcode & 0x0f00) >> 8) + 1;
+            this.pc += 2;
             break;
         }
         break;
@@ -464,18 +487,11 @@ class Chip8 {
 
     if (this.st > 0) {
       if (this.st == 1) {
-        console.log("BEEP");
-        //const beepSound = new Audio("beep.mp3");
-        //beepSound.play();
+        const beepSound = new Audio("assets/beep.mp3");
+        beepSound.play();
       }
       --this.st;
     }
-
-    this.pc = pc;
-    this.sp = sp;
-    this.stack = stack;
-    this.V = V;
-    this.I = I;
   }
 }
 
@@ -684,7 +700,7 @@ function main() {
         console.log("Memory after loading program:", chip8.mem);
 
         // Emulation loop
-        const freq = 1000 / 60; // 60 Hz
+        const freq = 1000 / 500; // 500 Hz
         const intervalId = setInterval(() => {
           // Emulate one cycle
           chip8.emulateCycle();
